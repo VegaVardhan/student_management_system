@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professor Admin Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+        .sidebar {
+            width: 25%;
+            background-color: #f8f9fa;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .content {
+            width: 75%;
+            padding: 20px;
+        }
+        .professor-details, .course-list, .student-details {
+            margin-bottom: 20px;
+        }
+        .course-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        .course-list li {
+            padding: 10px;
+            background-color: #e9ecef;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+        .course-list li:hover {
+            background-color: #ced4da;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #dee2e6;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        .marks-input {
+            width: 50px;
+        }
+        .logout {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+        #logout-btn {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        #logout-btn:hover {
+            background-color: rgb(209, 5, 5);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="professor-details">
+            <h2>Professor Details</h2>
+            <p id="prof-name">Name: </p>
+            <p id="prof-email">Email: </p>
+            <p id="prof-dept">Department: </p>
+        </div>
+        <div class="course-list">
+            <h2>Courses</h2>
+            <ul id="course-list">
+            </ul>
+        </div>
+    </div>
+    <div class="content">
+        <div class="student-details" id="student-details">
+            <h2>Student Details</h2>
+            <p>Select a course to view student details and add marks.</p>
+        </div>
+    </div>
+    <div class="logout">
+        <button id="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            fetch('/admin-data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('prof-name').innerText = `Name: ${data.professor.name}`;
+                    document.getElementById('prof-email').innerText = `Email: ${data.professor.email}`;
+                    document.getElementById('prof-dept').innerText = `Department: ${data.professor.dept_name}`;
+                    
+                    const courseList = document.getElementById('course-list');
+                    data.courses.forEach(course => {
+                        const li = document.createElement('li');
+                        li.innerText = `${course.course_id} - ${course.title}`;
+                        li.setAttribute('onclick',"showCourseDetails('" + course.course_id + "')");
+                        courseList.appendChild(li);
+                    });
+                });
+        });
+
+        function showCourseDetails(courseId) {
+            console.log(`Fetching details for course: ${courseId}`);
+            fetch(`/course-details/${courseId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(students => {
+                    console.log('Received students data:', students);
+                    if (students.error) {
+                        throw new Error(students.error);
+                    }
+
+                    const studentDetailsDiv = document.getElementById('student-details');
+                    let studentDetailsHTML = `
+                        <h2>Students Enrolled in ${courseId}</h2>
+                        <form id="marks-form" onsubmit="submitMarks(event, '${courseId}')">
+                        <table>
+                            <tr>
+                                <th>Name</th>
+                                <th>Quiz-1</th>
+                                <th>Mid-sem</th>
+                                <th>Quiz-2</th>
+                                <th>End-sem</th>
+                                <th>Grade</th>
+                            </tr>
+                    `;
+
+                    students.forEach(student => {
+                        studentDetailsHTML += `
+                            <tr>
+                                <td>${student.name}</td>
+                                <td><input type="number" class="marks-input" name="quiz1_${student.email}" value="${student.quiz1 || ''}"></td>
+                                <td><input type="number" class="marks-input" name="midsem_${student.email}" value="${student.midsem || ''}"></td>
+                                <td><input type="number" class="marks-input" name="quiz2_${student.email}" value="${student.quiz2 || ''}"></td>
+                                <td><input type="number" class="marks-input" name="endsem_${student.email}" value="${student.endsem || ''}"></td>
+                                <td>${student.grade || ''}</td>
+                            </tr>
+                        `;
+                    });
+
+                    studentDetailsHTML += `</table><button type="submit">Submit Marks</button></form>`;
+                    studentDetailsDiv.innerHTML = studentDetailsHTML;
+                })
+                .catch(error => {
+                    console.error('Error fetching course details:', error);
+                    const studentDetailsDiv = document.getElementById('student-details');
+                    studentDetailsDiv.innerHTML = `<p>Error fetching course details. Please try again later.</p>`;
+                });
+        }
+
+        function submitMarks(event, courseId) {
+            event.preventDefault();
+            const formData = new FormData(document.getElementById('marks-form'));
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+
+            fetch(`/submit-marks/${courseId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                showCourseDetails(courseId);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function logout() {
+            window.location.href = '/logout';
+        }
+    </script>
+</body>
+</html>

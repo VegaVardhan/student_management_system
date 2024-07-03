@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Student Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+        .sidebar {
+            width: 25%;
+            background-color: #f8f9fa;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .content {
+            width: 75%;
+            padding: 20px;
+        }
+        .professor-details, .course-list, .student-details {
+            margin-bottom: 20px;
+        }
+        .course-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        .course-list li {
+            padding: 10px;
+            background-color: #e9ecef;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+        .course-list li:hover {
+            background-color: #ced4da;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #dee2e6;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        .marks-input {
+            width: 50px;
+        }
+        .logout {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+        #logout-btn {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        #logout-btn:hover {
+            background-color: darkred;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="Student-details">
+            <h2>Student Details</h2>
+            <div id="student-info">
+                <p>Name: {{ student.name }}</p>
+                <p>Email: {{ student.email }}</p>
+                <p>Dept: {{ student.dept_name }}</p>
+                <!--script will load details here-->
+            </div>
+        </div>
+        <div class="course-list">
+            <h2>Enrolled Courses</h2>
+            <ul id="course-list">
+                {% for course in courses %}
+                <li onclick="showCourseDetails('{{ course.course_id }}')">{{ course.course_id }} - {{ course.title }}</li>
+                {% endfor %}
+                <!-- Add more courses as needed -->
+            </ul>
+        </div>
+    </div>
+    <div class="content">
+        <div class="student-details" id="student-details" name="student-details">
+            <h2>Course Enrollment</h2>
+            <p>Select a course to enroll</p>
+        </div>
+    </div>
+    <div class="logout">
+        <button id="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        function showCourseDetails(courseId) {
+            fetch(`/course-details/${courseId}`)
+                .then(response => response.json())
+                .then(students => {
+                    const studentDetailsDiv = document.getElementById('student-details');
+                    let studentDetailsHTML = `
+                        <h2>${courseId}</h2>
+                        <table>
+                            <tr>
+                                <th>Quiz-1</th>
+                                <th>Mid-sem</th>
+                                <th>Quiz-2</th>
+                                <th>End-sem</th>
+                                <th>Grade</th>
+                            </tr>
+                    `;
+
+                    students.forEach(student => {
+                        studentDetailsHTML += `
+                            <tr>
+                                <td>${student.quiz1}</td>
+                                <td>${student.midsem}</td>
+                                <td>${student.quiz2}</td>
+                                <td>${student.endsem}</td>
+                                <td>${student.grade}</td>
+                            </tr>
+                        `;
+                    });
+
+                    studentDetailsHTML += `</table>`;
+                    studentDetailsDiv.innerHTML = studentDetailsHTML;
+                });
+        } 
+
+        function logout() {
+            window.location.href = '/logout';
+        }
+    </script>
+</body>
+</html>
